@@ -1,0 +1,35 @@
+plugins {
+  id 'com.github.johnrengelman.shadow' version '1.2.4'
+}
+
+group 'net.ancientabyss.absimm'
+version '1.0-SNAPSHOT'
+
+apply plugin: 'java'
+
+sourceCompatibility = 1.8
+
+task stage(dependsOn: ['build', 'clean'])
+build.mustRunAfter clean
+
+assemble.dependsOn(shadowJar);
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'Main'
+    }
+}
+
+repositories {
+    mavenCentral()
+    flatDir {
+        dirs 'libs'
+    }
+}
+
+dependencies {
+    compile group: 'org.telegram', name: 'telegrambots', version: '2.4.3'
+    compile name: 'absim-xmpp-1.0-SNAPSHOT'
+    testCompile group: 'junit', name: 'junit', version: '4.11'
+}
+
