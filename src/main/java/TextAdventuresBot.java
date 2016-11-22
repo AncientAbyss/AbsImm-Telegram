@@ -76,9 +76,9 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
                     "    <part name=\"ch-intro\" condition=\"in_ch-intro\">\n" +
                     "        <action name=\"enter\" text=\"\n" +
                     "Hello carbon based unit! You reached a prototype of AbsImm, a simple, open, general purpose text adventure engine. I am sorry to have to tell you that I do not have stories available for you quite yet.\\n\n" +
-                    "However, if you are interested in the project, and want to see it move forward, please /contact me or have a look at my /homepage?\\n\n" +
+                    "However, if you are interested in the project, and want to see it move forward, please /contact me or have a look at my /homepage.\\n\n" +
                     "Are you, by any chance, a /writer or /developer?\\n\n" +
-                    "Please /contact us if you want to know more or want this project to kick off!\\n\n" +
+                    "Please /contact me if you want to know more or want this project to kick off!\\n\n" +
                     "\\n\n" +
                     "Have a nice day, and thanks for stopping by!\n" +
                     "\t\t\"/>\n" +
