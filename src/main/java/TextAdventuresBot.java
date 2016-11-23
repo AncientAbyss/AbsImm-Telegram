@@ -2,12 +2,16 @@ import at.absoluteimmersion.core.Loader;
 import at.absoluteimmersion.core.ReactionClient;
 import at.absoluteimmersion.core.Story;
 import at.absoluteimmersion.core.StoryException;
+import com.mysql.cj.jdbc.MysqlDataSource;
 import org.jivesoftware.smack.SmackException;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,6 +19,11 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
 
     public static final String BOT_USERNAME = "TextAdventures_Bot";
     public static final String BOT_TOKEN_PROPERTY_NAME = "TELEGRAM_BOT_TOKEN";
+    public static final String DB_HOST_PROPERTY_NAME = "DB_HOST";
+    public static final String DB_NAME_PROPERTY_NAME = "DB_NAME";
+    public static final String DB_USER_PROPERTY_NAME = "DB_USER";
+    public static final String DB_PASS_PROPERTY_NAME = "DB_PASS";
+    private MysqlDataSource dataSource;
 
     public class Client implements ReactionClient {
         private Long chatId;
@@ -126,6 +135,29 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
 
     public TextAdventuresBot() {
         sessions = new HashMap<>();
+        initDataSource();
+    }
+
+    private void initDataSource() {
+        dataSource = new MysqlDataSource();
+        dataSource.setUser(readFromPropertyOrEnv(DB_USER_PROPERTY_NAME));
+        dataSource.setPassword(readFromPropertyOrEnv(DB_PASS_PROPERTY_NAME));
+        dataSource.setServerName(readFromPropertyOrEnv(DB_HOST_PROPERTY_NAME));
+        dataSource.setDatabaseName(readFromPropertyOrEnv(DB_NAME_PROPERTY_NAME));
+    }
+
+    private void insertCommand(int userId, String command) {
+        try {
+            Connection conn = dataSource.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement("INSERT INTO command(user_id, message, date) VALUES(?, ?, now());");
+            pstmt.setInt(1, userId);
+            pstmt.setString(2, command);
+            pstmt.execute();
+            pstmt.close();
+            conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -144,6 +176,9 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
 
     private void handleUpdate(Update update) throws StoryException, SmackException.NotConnectedException {
         Integer userId = update.getMessage().getFrom().getId();
+
+        insertCommand(userId, update.getMessage().getText());
+
         if (!sessions.containsKey(userId)) { // TODO: check if session is active...
             initUserSession(update, userId);
             return;
@@ -170,7 +205,11 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
 
     @Override
     public String getBotToken() {
-        String tokenProperty = System.getProperty(BOT_TOKEN_PROPERTY_NAME);
-        return (tokenProperty == null || tokenProperty.isEmpty()) ? System.getenv(BOT_TOKEN_PROPERTY_NAME) : tokenProperty;
+        return readFromPropertyOrEnv(BOT_TOKEN_PROPERTY_NAME);
+    }
+
+    private String readFromPropertyOrEnv(String name) {
+        String tokenProperty = System.getProperty(name);
+        return (tokenProperty == null || tokenProperty.isEmpty()) ? System.getenv(name) : tokenProperty;
     }
 }
