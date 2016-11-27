@@ -18,7 +18,7 @@ public class Main {
     private static void initWebServer() {
         HttpServer server = null;
         try {
-            int port = Integer.parseInt(System.getProperty("port"));
+            int port = Integer.parseInt(Util.readFromPropertyOrEnv("port"));
             System.out.println("Starting server on " + port + "...");
             server = HttpServer.create(new InetSocketAddress(port), 0);
         } catch (IOException e) {

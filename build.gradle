@@ -1,18 +1,37 @@
+buildscript {
+    repositories {
+        jcenter()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'org.jooq:jooq-codegen:3.6.1'
+        classpath 'org.postgresql:postgresql:9.4.1212.jre7'
+        classpath 'gradle.plugin.com.boxfuse.client:flyway-release:4.0.3'
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.4'
+    }
+}
+
 plugins {
-  id 'com.github.johnrengelman.shadow' version '1.2.4'
+    id "org.flywaydb.flyway" version "4.0.3"
+    id 'nu.studer.jooq' version '2.0.2'
 }
 
 group 'net.ancientabyss.absimm'
+
 version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
+apply plugin: 'org.flywaydb.flyway'
+apply plugin: 'com.github.johnrengelman.shadow'
 
 sourceCompatibility = 1.8
 
-task stage(dependsOn: ['build', 'clean'])
+task stage(dependsOn: ['flywayMigrate', 'build', 'clean'])
 build.mustRunAfter clean
+build.mustRunAfter flywayMigrate
 
-assemble.dependsOn(shadowJar);
+assemble.dependsOn(shadowJar)
 
 jar {
     manifest {
@@ -20,7 +39,19 @@ jar {
     }
 }
 
+configurations {
+    compile.extendsFrom generatedCompile
+}
+
+sourceSets {
+    generated
+    main {
+        compileClasspath += generated.output
+    }
+}
+
 repositories {
+    mavenLocal()
     mavenCentral()
     flatDir {
         dirs 'libs'
@@ -30,7 +61,53 @@ repositories {
 dependencies {
     compile group: 'org.telegram', name: 'telegrambots', version: '2.4.3'
     compile name: 'absim-xmpp-1.0-SNAPSHOT'
-    compile group: 'mysql', name: 'mysql-connector-java', version: '6.0.5'
+    compile group: 'org.postgresql', name: 'postgresql', version: '9.4.1212.jre7'
+    generatedCompile 'org.jooq:jooq:3.6.1',
+            'org.jooq:jooq-meta:3.6.1',
+            'org.jooq:jooq-codegen:3.6.1'
+    generatedCompile group: 'org.flywaydb', name: 'flyway-core', version: '4.0.3'
     testCompile group: 'junit', name: 'junit', version: '4.11'
+    jooqRuntime 'org.postgresql:postgresql:9.4.1212.jre7'
 }
 
+
+// db migration
+flyway {
+    user = System.getenv('JDBC_DATABASE_USERNAME')
+    password = System.getenv('JDBC_DATABASE_PASSWORD')
+    url = System.getenv('JDBC_DATABASE_URL')
+    driver = 'org.postgresql.Driver'
+    schemas = ['public']
+}
+
+
+// code generation
+jooq {
+    version = '3.8.5'
+    edition = 'OSS'
+    absimm(sourceSets.main) {
+        jdbc {
+            user = System.getenv('JDBC_DATABASE_USERNAME')
+            password = System.getenv('JDBC_DATABASE_PASSWORD')
+            url = System.getenv('JDBC_DATABASE_URL')
+            driver = 'org.postgresql.Driver'
+            schema = 'public'
+        }
+        generator {
+            name = 'org.jooq.util.DefaultGenerator'
+            database {
+                name = 'org.jooq.util.postgres.PostgresDatabase'
+            }
+            generate {
+                relations = true
+                deprecated = false
+                records = true
+                immutablePojos = true
+                fluentSetters = true
+            }
+            target {
+                packageName = 'net.ancientabyss.data'
+            }
+        }
+    }
+}

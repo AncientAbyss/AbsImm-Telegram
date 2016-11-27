@@ -2,28 +2,31 @@ import at.absoluteimmersion.core.Loader;
 import at.absoluteimmersion.core.ReactionClient;
 import at.absoluteimmersion.core.Story;
 import at.absoluteimmersion.core.StoryException;
-import com.mysql.cj.jdbc.MysqlDataSource;
+import net.ancientabyss.data.tables.records.CommandRecord;
 import org.jivesoftware.smack.SmackException;
+import org.jooq.DSLContext;
+import org.jooq.SQLDialect;
+import org.jooq.impl.DSL;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
 
 import java.sql.Connection;
-import java.sql.PreparedStatement;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static net.ancientabyss.data.Tables.COMMAND;
+
 public class TextAdventuresBot extends TelegramLongPollingBot {
 
-    public static final String BOT_USERNAME = "TextAdventures_Bot";
-    public static final String BOT_TOKEN_PROPERTY_NAME = "TELEGRAM_BOT_TOKEN";
-    public static final String DB_HOST_PROPERTY_NAME = "DB_HOST";
-    public static final String DB_NAME_PROPERTY_NAME = "DB_NAME";
-    public static final String DB_USER_PROPERTY_NAME = "DB_USER";
-    public static final String DB_PASS_PROPERTY_NAME = "DB_PASS";
-    private MysqlDataSource dataSource;
+    private static final String BOT_USERNAME = "TextAdventures_Bot";
+    private static final String BOT_TOKEN_PROPERTY_NAME = "TELEGRAM_BOT_TOKEN";
+    private static final String DB_URL_PROPERTY_NAME = "JDBC_DATABASE_URL";
+    private static final String DB_USER_PROPERTY_NAME = "JDBC_DATABASE_USERNAME";
+    private static final String DB_PASS_PROPERTY_NAME = "JDBC_DATABASE_PASSWORD";
 
     public class Client implements ReactionClient {
         private Long chatId;
@@ -102,7 +105,7 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
                     "    <part name=\"ch-writer\" condition=\"in_ch-writer\">\n" +
                     "        <action name=\"enter\" text=\"\n" +
                     "Wohaa, cool! If you want to share one of your stories as interactive adventure,\n" +
-                    "you can already do so, just have a look at the \\homepage!\n" +
+                    "you can already do so, just have a look at the /homepage!\n" +
                     "If you need assistance, or simply do not want to do this yourself, please let me know! (/contact).\n" +
                     "        \"/>\n" +
                     "    </part>\n" +
@@ -135,26 +138,19 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
 
     public TextAdventuresBot() {
         sessions = new HashMap<>();
-        initDataSource();
     }
 
-    private void initDataSource() {
-        dataSource = new MysqlDataSource();
-        dataSource.setUser(readFromPropertyOrEnv(DB_USER_PROPERTY_NAME));
-        dataSource.setPassword(readFromPropertyOrEnv(DB_PASS_PROPERTY_NAME));
-        dataSource.setServerName(readFromPropertyOrEnv(DB_HOST_PROPERTY_NAME));
-        dataSource.setDatabaseName(readFromPropertyOrEnv(DB_NAME_PROPERTY_NAME));
-    }
-
-    private void insertCommand(int userId, String command) {
-        try {
-            Connection conn = dataSource.getConnection();
-            PreparedStatement pstmt = conn.prepareStatement("INSERT INTO command(user_id, message, date) VALUES(?, ?, now());");
-            pstmt.setInt(1, userId);
-            pstmt.setString(2, command);
-            pstmt.execute();
-            pstmt.close();
-            conn.close();
+    private void insertCommand(int userId, String value) {
+        try (Connection conn = DriverManager.getConnection(
+                Util.readFromPropertyOrEnv(DB_URL_PROPERTY_NAME),
+                Util.readFromPropertyOrEnv(DB_USER_PROPERTY_NAME),
+                Util.readFromPropertyOrEnv(DB_PASS_PROPERTY_NAME));
+             DSLContext create = DSL.using(conn, SQLDialect.POSTGRES)
+        ) {
+            CommandRecord command = create.newRecord(COMMAND);
+            command.setUserId(userId);
+            command.setValue(value);
+            command.store();
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -205,11 +201,7 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
 
     @Override
     public String getBotToken() {
-        return readFromPropertyOrEnv(BOT_TOKEN_PROPERTY_NAME);
+        return Util.readFromPropertyOrEnv(BOT_TOKEN_PROPERTY_NAME);
     }
 
-    private String readFromPropertyOrEnv(String name) {
-        String tokenProperty = System.getProperty(name);
-        return (tokenProperty == null || tokenProperty.isEmpty()) ? System.getenv(name) : tokenProperty;
-    }
 }

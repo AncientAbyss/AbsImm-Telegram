@@ -35,7 +35,7 @@ Have a nice day, and thanks for stopping by!
     <part name="ch-writer" condition="in_ch-writer">
         <action name="enter" text="
 Wohaa, cool! If you want to share one of your stories as interactive adventure,
-you can already do so, just have a look at the \homepage!
+you can already do so, just have a look at the /homepage!
 If you need assistance, or simply do not want to do this yourself, please let me know! (/contact).
         "/>
     </part>
