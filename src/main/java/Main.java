@@ -1,7 +1,6 @@
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.ApiContextInitializer;
 import org.telegram.telegrambots.TelegramBotsApi;
@@ -22,7 +21,7 @@ public class Main {
     private static void initWebServer() {
         HttpServer server = null;
         try {
-            int port = Integer.parseInt(Util.readFromPropertyOrEnv("port"));
+            int port = Integer.parseInt(Util.readFromPropertyOrEnv("PORT"));
             Logger.trace("Starting server on " + port + "...");
             server = HttpServer.create(new InetSocketAddress(port), 0);
         } catch (IOException e) {
