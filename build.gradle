@@ -62,6 +62,8 @@ dependencies {
     compile group: 'org.telegram', name: 'telegrambots', version: '2.4.3'
     compile name: 'absim-xmpp-1.0-SNAPSHOT'
     compile group: 'org.postgresql', name: 'postgresql', version: '9.4.1212.jre7'
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.21'
+    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.21'
     generatedCompile 'org.jooq:jooq:3.6.1',
             'org.jooq:jooq-meta:3.6.1',
             'org.jooq:jooq-codegen:3.6.1'

@@ -7,6 +7,8 @@ import org.jivesoftware.smack.SmackException;
 import org.jooq.DSLContext;
 import org.jooq.SQLDialect;
 import org.jooq.impl.DSL;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.api.methods.send.SendMessage;
 import org.telegram.telegrambots.api.objects.Update;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -21,6 +23,8 @@ import java.util.Map;
 import static net.ancientabyss.data.Tables.COMMAND;
 
 public class TextAdventuresBot extends TelegramLongPollingBot {
+
+    private static final Logger Logger = LoggerFactory.getLogger(TextAdventuresBot.class);
 
     private static final String BOT_USERNAME = "TextAdventures_Bot";
     private static final String BOT_TOKEN_PROPERTY_NAME = "TELEGRAM_BOT_TOKEN";
@@ -41,17 +45,7 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
 
         @Override
         public void reaction(String text) {
-            try {
-                String line = text.replace("\\n", "\n");
-                SendMessage message = new SendMessage()
-                        .setChatId(chatId)
-                        .setText(line)
-                        .disableWebPagePreview()
-                        .enableMarkdown(true);
-                sendMessage(message);
-            } catch (TelegramApiException e) {
-                e.printStackTrace();
-            }
+            sendMessageToChat(text, chatId);
         }
     }
 
@@ -152,7 +146,7 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
             command.setValue(value);
             command.store();
         } catch (SQLException e) {
-            e.printStackTrace();
+            Logger.error(e.getMessage());
         }
     }
 
@@ -161,12 +155,12 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
         if (!(update.hasMessage() && update.getMessage().hasText())) {
             return;
         }
-        System.out.println("Handling bot request...");
+        Logger.trace("Handling bot request...");
 
         try {
             handleUpdate(update);
         } catch (StoryException | SmackException.NotConnectedException e) {
-            e.printStackTrace();
+            Logger.error(e.getMessage());
         }
     }
 
@@ -204,4 +198,17 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
         return Util.readFromPropertyOrEnv(BOT_TOKEN_PROPERTY_NAME);
     }
 
+    private void sendMessageToChat(String text, Long chatId) {
+        try {
+            String line = text.replace("\\n", "\n");
+            SendMessage message = new SendMessage()
+                    .setChatId(chatId)
+                    .setText(line)
+                    .disableWebPagePreview()
+                    .enableMarkdown(true);
+            sendMessage(message);
+        } catch (TelegramApiException e) {
+            Logger.error(e.getMessage());
+        }
+    }
 }

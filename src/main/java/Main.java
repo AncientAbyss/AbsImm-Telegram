@@ -1,6 +1,8 @@
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.ApiContextInitializer;
 import org.telegram.telegrambots.TelegramBotsApi;
 import org.telegram.telegrambots.exceptions.TelegramApiException;
@@ -10,6 +12,8 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 
 public class Main {
+    private static final org.slf4j.Logger Logger = LoggerFactory.getLogger(Main.class);
+
     public static void main(String[] args) {
         initTelegram();
         initWebServer();
@@ -19,10 +23,10 @@ public class Main {
         HttpServer server = null;
         try {
             int port = Integer.parseInt(Util.readFromPropertyOrEnv("port"));
-            System.out.println("Starting server on " + port + "...");
+            Logger.trace("Starting server on " + port + "...");
             server = HttpServer.create(new InetSocketAddress(port), 0);
         } catch (IOException e) {
-            e.printStackTrace(); // TODO: use proper logging
+            Logger.error(e.getMessage());
         }
         server.createContext("/", new MyHttpHandler());
         server.setExecutor(null); // creates a default executor
@@ -35,14 +39,14 @@ public class Main {
         try {
             telegramBotsApi.registerBot(new TextAdventuresBot());
         } catch (TelegramApiException e) {
-            e.printStackTrace();
+            Logger.error(e.getMessage());
         }
     }
 
     private static class MyHttpHandler implements HttpHandler {
         @Override
         public void handle(HttpExchange httpExchange) throws IOException {
-            System.out.println("Handling web request...");
+            Logger.trace("Handling web request...");
             String response = "Welcome to AbsImm.";
             httpExchange.sendResponseHeaders(200, response.length());
             OutputStream os = httpExchange.getResponseBody();
