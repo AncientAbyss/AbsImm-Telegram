@@ -73,11 +73,29 @@ dependencies {
 }
 
 
+String dbUsername = ""
+String dbPassword = ""
+String dbUrl = ""
+
+if (!System.getenv('JDBC_DATABASE_URL')?.trim()) {
+    // Workaround for getting database configuration in Heroku, see
+    // http://stackoverflow.com/questions/27954841/heroku-database-url-as-a-jdbc-url-for-maven
+    URI dbUri = new URI(System.getenv("DATABASE_URL"))
+    dbUsername = dbUri.getUserInfo().split(":")[0]
+    dbPassword = dbUri.getUserInfo().split(":")[1]
+    dbUrl = "jdbc:postgresql://" + dbUri.getHost() + ":" + dbUri.getPort() + dbUri.getPath()
+} else {
+    dbUsername = System.getenv('JDBC_DATABASE_USERNAME')
+    dbPassword = System.getenv('JDBC_DATABASE_PASSWORD')
+    dbUrl = System.getenv('JDBC_DATABASE_URL')
+}
+
+
 // db migration
 flyway {
-    user = System.getenv('JDBC_DATABASE_USERNAME')
-    password = System.getenv('JDBC_DATABASE_PASSWORD')
-    url = System.getenv('JDBC_DATABASE_URL')
+    user = dbUsername
+    password = dbPassword
+    url = dbUrl
     driver = 'org.postgresql.Driver'
     schemas = ['public']
 }
@@ -89,9 +107,9 @@ jooq {
     edition = 'OSS'
     absimm(sourceSets.main) {
         jdbc {
-            user = System.getenv('JDBC_DATABASE_USERNAME')
-            password = System.getenv('JDBC_DATABASE_PASSWORD')
-            url = System.getenv('JDBC_DATABASE_URL')
+            user = dbUsername
+            password = dbPassword
+            url = dbUrl
             driver = 'org.postgresql.Driver'
             schema = 'public'
         }
