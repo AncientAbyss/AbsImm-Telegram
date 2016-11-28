@@ -2,6 +2,7 @@ import at.absoluteimmersion.core.Loader;
 import at.absoluteimmersion.core.ReactionClient;
 import at.absoluteimmersion.core.Story;
 import at.absoluteimmersion.core.StoryException;
+import net.ancientabyss.data.tables.pojos.Command;
 import net.ancientabyss.data.tables.records.CommandRecord;
 import org.jivesoftware.smack.SmackException;
 import org.jooq.DSLContext;
@@ -17,7 +18,9 @@ import org.telegram.telegrambots.exceptions.TelegramApiException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static net.ancientabyss.data.Tables.COMMAND;
@@ -150,6 +153,21 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
         }
     }
 
+    private List<Command> getCommands(int userId) {
+        try (Connection conn = DriverManager.getConnection(
+                Util.readFromPropertyOrEnv(DB_URL_PROPERTY_NAME),
+                Util.readFromPropertyOrEnv(DB_USER_PROPERTY_NAME),
+                Util.readFromPropertyOrEnv(DB_PASS_PROPERTY_NAME));
+             DSLContext create = DSL.using(conn, SQLDialect.POSTGRES)
+        ) {
+            List<Command> commands = create.select().from(COMMAND).where(COMMAND.USER_ID.eq(userId)).orderBy(COMMAND.ID).fetch().into(Command.class);
+            return commands;
+        } catch (SQLException e) {
+            Logger.error(e.getMessage());
+        }
+        return new ArrayList<>();
+    }
+
     @Override
     public void onUpdateReceived(Update update) {
         if (!(update.hasMessage() && update.getMessage().hasText())) {
@@ -167,11 +185,14 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
     private void handleUpdate(Update update) throws StoryException, SmackException.NotConnectedException {
         Integer userId = update.getMessage().getFrom().getId();
 
+        List<Command> commands = getCommands(userId);
         insertCommand(userId, update.getMessage().getText());
 
         if (!sessions.containsKey(userId)) { // TODO: check if session is active...
-            initUserSession(update, userId);
-            return;
+            initUserSession(update, userId, commands);
+            if (commands.isEmpty()) {
+                return; // ignore the first command, which just started the game
+            }
         }
 
         UserSession session = sessions.get(userId);
@@ -180,12 +201,23 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
         session.story.interact(update.getMessage().getText().replaceAll("^/", ""));
     }
 
-    private void initUserSession(Update update, Integer userId) throws StoryException, SmackException.NotConnectedException {
+    private void initUserSession(Update update, Integer userId, List<Command> commands) throws StoryException, SmackException.NotConnectedException {
         Story story = new Loader().fromString(testStory);
+        if (!commands.isEmpty()) {
+            Logger.trace("Restoring game...");
+            story.tell();
+            for (Command command : commands) {
+                story.interact(command.getValue());
+            }
+        }
+
         Client client = new Client(update.getMessage().getChatId());
         story.addClient(client);
         sessions.put(userId, new UserSession(story, client));
-        story.tell();
+
+        if (commands.isEmpty()) {
+            story.tell();
+        }
     }
 
     @Override
