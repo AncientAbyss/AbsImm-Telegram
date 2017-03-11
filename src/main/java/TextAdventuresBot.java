@@ -186,14 +186,15 @@ public class TextAdventuresBot extends TelegramLongPollingBot {
         Integer userId = update.getMessage().getFrom().getId();
 
         List<Command> commands = getCommands(userId);
-        insertCommand(userId, update.getMessage().getText());
 
         if (!sessions.containsKey(userId)) { // TODO: check if session is active...
             initUserSession(update, userId, commands);
             if (commands.isEmpty()) {
-                return; // ignore the first command, which just started the game
+                return; // ignore the first command, which just started the game, i.e. '/start'
             }
         }
+
+        insertCommand(userId, update.getMessage().getText());
 
         UserSession session = sessions.get(userId);
         session.client.SetChatId(update.getMessage().getChatId());
