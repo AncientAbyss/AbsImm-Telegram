@@ -5,7 +5,7 @@ CREATE TABLE Story (
     version_patch TINYINT, -- cosmetic changes
     about TEXT,
     language VARCHAR(2),
-    tags -- separate table?
+    -- tags separate table?
     content TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
